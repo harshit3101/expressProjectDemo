@@ -3,6 +3,7 @@ const session = require('express-session');
 const { uniqueNamesGenerator, starWars } = require('unique-names-generator');
 const MongoStore = require('connect-mongo');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const user = require('./user');
 
 
 // enrionment vairbale
@@ -40,9 +41,6 @@ app.get('/', (req, res) => {
  res.json(req.session.names);
 });
 
-// function(err, results) {
-//   res.send(results);
-// }
 
 app.get('/get-session-data', (req, res) => {
   return mongoClient.connect().then(client => {
@@ -56,6 +54,33 @@ app.get('/get-session-data', (req, res) => {
 app.get('/delete-session', (req, res) => {
   req.session.destroy();
  res.send("done");
+});
+
+app.get('/register-user', (req, res) => {
+  let userName = req.query.userName;
+  let password = req.query.password;
+
+  if(userName && password){
+      user.register({ username: userName, active: false }, password, (err, result)=> {
+        if(err){
+          res.status(200).json({msg:err});
+        }else{
+          res.status(200).json({msg:"user registered in DataBase"});
+        }
+      });
+     
+  }else{
+    res.send("Please provide userName and password as query params");
+  }
+});
+
+app.get('/get-users-data', (req, res) => {
+  return mongoClient.connect().then(client => {
+    client.db().collection('userdetails').find({}).toArray((err, results) => {
+      res.json(results)
+    }
+    );
+  });
 });
 
 app.listen(3000, () => {
