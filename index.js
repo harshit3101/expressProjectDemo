@@ -4,6 +4,9 @@ const { uniqueNamesGenerator, starWars } = require('unique-names-generator');
 const MongoStore = require('connect-mongo');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const user = require('./user');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const connectEnsureLogin = require('connect-ensure-login');
 
 
 // enrionment vairbale
@@ -31,10 +34,27 @@ app.use(session({
   secret: 'Very Easy Secret',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({clientPromise: storeClient.connect()})
+  store: MongoStore.create({clientPromise: storeClient.connect()}),
+  cookie: { maxAge: 30 * 1000 } // 1 hour
 }));
 
+// Configure More Middleware
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport Local Strategy
+passport.use(user.createStrategy());
+
+// To use with sessions
+passport.serializeUser(user.serializeUser());
+passport.deserializeUser(user.deserializeUser());
+
 app.get('/', (req, res) => {
+ res.json({msg: "HomePage"});
+});
+
+app.get('/getNames', connectEnsureLogin.ensureLoggedIn(), (req, res) => {
   if(!req.session.names){
   req.session.names = getStarWarsCharacters();
   }
@@ -81,6 +101,11 @@ app.get('/get-users-data', (req, res) => {
     }
     );
   });
+});
+
+app.post('/login', passport.authenticate('local', { failureRedirect: '/' }),  function(req, res) {
+	console.log(req.user)
+	res.send('successfully logged in');
 });
 
 app.listen(3000, () => {
