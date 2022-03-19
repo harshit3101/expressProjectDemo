@@ -35,7 +35,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({clientPromise: storeClient.connect()}),
-  cookie: { maxAge: 30 * 1000 } // 1 hour
+  cookie: { maxAge: 60* 60 * 1000 } // 1 hour
 }));
 
 // Configure More Middleware
@@ -76,12 +76,36 @@ app.get('/delete-session', (req, res) => {
  res.send("done");
 });
 
+app.get('/updateLocation', connectEnsureLogin.ensureLoggedIn(), (req, res) => {
+  let latitude = req.query.latitude;
+  let longitude = req.query.longitude;
+
+  if(latitude && longitude){
+    let user = req.user;
+
+    user.location.latitude = latitude;
+    user.location.longitude = longitude;
+
+    user.save().then(
+      res => {console.log(res)},
+      err => {console.log(err)}
+    );
+
+    res.status(200).json({user:req.user})
+  }else{
+    res.send("Please provide latitude and longitude as query params");
+  }
+});
+
+
 app.get('/register-user', (req, res) => {
   let userName = req.query.userName;
   let password = req.query.password;
+  let latitude = req.query.latitude;
+  let longitude = req.query.longitude;
 
-  if(userName && password){
-      user.register({ username: userName, active: false }, password, (err, result)=> {
+  if(userName && password && latitude && longitude){
+      user.register({ username: userName, location: {latitude: latitude , longitude: longitude}, active: false }, password, (err, result)=> {
         if(err){
           res.status(200).json({msg:err});
         }else{
@@ -90,7 +114,7 @@ app.get('/register-user', (req, res) => {
       });
      
   }else{
-    res.send("Please provide userName and password as query params");
+    res.send("Please provide userName and password and latitude and longitude as query params");
   }
 });
 
